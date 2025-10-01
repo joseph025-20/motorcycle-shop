@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Motorcycle Parts Shop — Quality Parts & Fast Delivery</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <img src="https://via.placeholder.com/44x44?text=MP" alt="MotoParts logo" class="logo">
+        <div>
+          <div class="brand-name">MotoParts</div>
+          <div class="brand-tag">Quality parts • Fast delivery</div>
+        </div>
+      </div>
+
+      <div class="search-area">
+        <input id="searchBar" placeholder="Search parts, SKUs or bike models..." autocomplete="off">
+        <div id="autocomplete" class="autocomplete hidden"></div>
+      </div>
+
+      <div class="header-actions">
+        <div class="header-links">
+          <a href="addproduct.html" class="link small">Add Product</a>
+          <a href="cart.html" class="cart-link">Cart 🛒 <span id="cartCount">0</span></a>
+        </div>
+      </div>
+    </div>
+
+    <nav class="top-nav">
+      <ul>
+        <li><a href="#" class="active">All Parts</a></li>
+        <li><a href="#" data-cat="brakes">Brakes</a></li>
+        <li><a href="#" data-cat="engine">Engine</a></li>
+        <li><a href="#" data-cat="safety">Safety</a></li>
+        <li><a href="#" data-cat="accessories">Accessories</a></li>
+        <li><a href="#" data-cat="electrical">Electrical</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <h1>Trusted motorcycle parts for every ride</h1>
+        <p>Genuine & aftermarket parts, detailed compatibility, and fast local shipping.</p>
+        <div class="hero-ctas">
+          <button id="shopNow">Shop Parts</button>
+          <a href="addproduct.html" class="outline">Sell on MotoParts</a>
+        </div>
+      </div>
+      <div class="hero-art">
+        <img src="https://via.placeholder.com/520x340?text=Motorcycle+Parts" alt="motorcycle parts">
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured categories -->
+  <section class="featured">
+    <div class="container">
+      <div class="featured-grid">
+        <a class="cat" data-cat="brakes"><img src="https://via.placeholder.com/240x140?text=Brakes"><div>Brakes</div></a>
+        <a class="cat" data-cat="engine"><img src="https://via.placeholder.com/240x140?text=Engine"><div>Engine</div></a>
+        <a class="cat" data-cat="safety"><img src="https://via.placeholder.com/240x140?text=Safety"><div>Safety</div></a>
+        <a class="cat" data-cat="accessories"><img src="https://via.placeholder.com/240x140?text=Accessories"><div>Accessories</div></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Controls -->
+  <section class="controls container">
+    <div class="left">
+      <div id="resultCount">0 parts</div>
+    </div>
+    <div class="right">
+      <label for="sortSelect">Sort:</label>
+      <select id="sortSelect">
+        <option value="featured">Featured</option>
+        <option value="newest">Newest</option>
+        <option value="price-asc">Price — Low to High</option>
+        <option value="price-desc">Price — High to Low</option>
+        <option value="name">Name (A–Z)</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Product grid -->
+  <main class="container">
+    <section id="product-list" class="product-grid"></section>
+
+    <!-- Pagination -->
+    <nav class="pagination" id="pagination"></nav>
+  </main>
+
+  <!-- Trust / newsletter -->
+  <section class="trust container">
+    <div class="trust-grid">
+      <div class="trust-item">
+        <strong>Secure Checkout</strong>
+        <p>SSL encrypted payments (Stripe compatible)</p>
+      </div>
+      <div class="trust-item">
+        <strong>Local Shipping</strong>
+        <p>Fast dispatch within 24 hours</p>
+      </div>
+      <div class="trust-item newsletter">
+        <strong>Newsletter</strong>
+        <p>Get 10% off your first order</p>
+        <div class="newsletter-row">
+          <input id="newsletterEmail" placeholder="Email address">
+          <button id="subscribeBtn">Subscribe</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h4>MotoParts</h4>
+        <p>Quality motorcycle parts — trusted by riders.</p>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="#">All Parts</a></li>
+          <li><a href="#">Brands</a></li>
+          <li><a href="addproduct.html">Sell on MotoParts</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Shipping & Returns</a></li>
+          <li><a href="#">Compatibility Guide</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <p>Email: support@motoparts.example</p>
+        <p>Phone: +254 700 000 000</p>
+      </div>
+    </div>
+    <div class="copyright">© <span id="year"></span> MotoParts — All rights reserved</div>
+  </footer>
+
+  <!-- Quick view modal -->
+  <div id="quickView" class="modal hidden" role="dialog" aria-hidden="true">
+    <div class="modal-content">
+      <button class="modal-close" id="modalClose">✕</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

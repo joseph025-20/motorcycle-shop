@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Add Product — Motorcycle Parts Shop</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    
+    .add-form { max-width:720px; margin:20px auto; background:#fff; padding:18px; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.06); }
+    .row { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+    .col { flex:1 1 200px; min-width:160px; }
+    label { display:block; font-weight:600; margin-bottom:6px; font-size:14px; }
+    input[type="text"], input[type="number"], textarea, select { width:100%; padding:10px; border-radius:6px; border:1px solid #ddd; }
+    .preview { margin-top:12px; display:flex; gap:12px; align-items:center; }
+    .preview img { width:120px; height:90px; object-fit:cover; border-radius:6px; border:1px solid #eee; }
+    .success { color: green; margin-top:10px; font-weight:600; }
+    .msg { margin-top:10px; padding:8px 10px; border-radius:6px; display:none; }
+    .msg.success { background:#ecfdf5; color:#065f46; border:1px solid #bbf7d0; }
+    .msg.error { background:#fff1f2; color:#9f1239; border:1px solid #fecaca; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🏍️ Motorcycle Parts Shop</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="cart.html">Cart 🛒 (<span id="cartCount">0</span>)</a>
+      <a href="add-product.html">Add Product ➕</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="add-form" aria-labelledby="add-heading">
+      <h2 id="add-heading">Add a New Product</h2>
+
+      <form id="productForm" novalidate>
+        <div class="row">
+          <div class="col">
+            <label for="name">Product name</label>
+            <input id="name" name="name" type="text" required placeholder="e.g. Front Brake Pads" autofocus>
+          </div>
+
+          <div class="col">
+            <label for="sku">SKU</label>
+            <input id="sku" name="sku" type="text" placeholder="optional SKU">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label for="price">Price (KES)</label>
+            <input id="price" name="price" type="number" min="0" step="1" required placeholder="e.g. 1500">
+          </div>
+
+          <div class="col">
+            <label for="stock">Stock quantity</label>
+            <input id="stock" name="stock" type="number" min="0" step="1" value="10">
+          </div>
+
+          <div class="col">
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
+              <option value="brakes">Brakes</option>
+              <option value="safety">Safety</option>
+              <option value="engine">Engine</option>
+              <option value="accessories">Accessories</option>
+              <option value="electrical">Electrical</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label for="image">Image URL</label>
+          <input id="image" name="image" type="text" placeholder="Paste image URL or leave empty for placeholder">
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" rows="4" placeholder="Short description (optional)"></textarea>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
+          <button type="submit">Add Product</button>
+          <button type="button" id="previewBtn">Preview</button>
+          <button type="button" id="clearBtn" style="background:#ddd; color:#111;">Clear Form</button>
+        </div>
+
+        <div class="preview" id="previewArea" aria-live="polite" style="display:none;">
+          <img id="previewImg" src="" alt="preview">
+          <div>
+            <div id="previewName" style="font-weight:700"></div>
+            <div id="previewPrice" style="color:#666"></div>
+            <div id="previewCategory" style="color:#666; font-size:13px"></div>
+          </div>
+        </div>
+
+        <div id="msg" class="msg" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_PRODUCTS_KEY = 'moto_products';
+    const STORAGE_CART_KEY = 'moto_cart';
+
+    function getProducts() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_PRODUCTS_KEY) || '[]'); }
+      catch (e) { console.error('Could not parse products', e); return []; }
+    }
+    function saveProducts(arr) {
+      localStorage.setItem(STORAGE_PRODUCTS_KEY, JSON.stringify(arr));
+      // notify other scripts in same tab
+      window.dispatchEvent(new Event('productsUpdated'));
+    }
+
+    function nextId() {
+      const items = getProducts();
+      if (!items.length) return 1;
+      return Math.max(...items.map(i => Number(i.id) || 0)) + 1;
+    }
+
+    // DOM
+    const form = document.getElementById('productForm');
+    const previewBtn = document.getElementById('previewBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const previewArea = document.getElementById('previewArea');
+    const previewImg = document.getElementById('previewImg');
+    const previewName = document.getElementById('previewName');
+    const previewPrice = document.getElementById('previewPrice');
+    const previewCategory = document.getElementById('previewCategory');
+    const msg = document.getElementById('msg');
+    const imageInput = document.getElementById('image');
+
+    function showMsg(text, type = 'success') {
+      msg.textContent = text;
+      msg.className = 'msg ' + (type === 'error' ? 'error' : 'success');
+      msg.style.display = 'block';
+      if (type === 'success') {
+        setTimeout(() => { msg.style.display = 'none'; }, 4000);
+      }
+    }
+
+    function isValidImageUrl(url) {
+      if (!url) return false;
+      try {
+        const u = new URL(url);
+        return u.protocol === 'http:' || u.protocol === 'https:';
+      } catch(e) { return false; }
+    }
+
+    function showPreview(data) {
+      previewImg.src = data.image && isValidImageUrl(data.image) ? data.image : `https://via.placeholder.com/400x300?text=${encodeURIComponent(data.name)}`;
+      previewImg.alt = data.name;
+      previewName.textContent = data.name;
+      previewPrice.textContent = 'KES ' + Number(data.price).toLocaleString();
+      previewCategory.textContent = 'Category: ' + (data.category || '—');
+      previewArea.style.display = 'flex';
+    }
+
+    // live preview when image URL changes
+    imageInput.addEventListener('input', () => {
+      const name = document.getElementById('name').value.trim() || 'Preview';
+      const price = document.getElementById('price').value || 0;
+      const category = document.getElementById('category').value || 'other';
+      const image = imageInput.value.trim();
+      showPreview({ name, price, category, image });
+    });
+
+    previewBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const data = {
+        name: document.getElementById('name').value.trim() || 'Unnamed product',
+        price: document.getElementById('price').value || 0,
+        category: document.getElementById('category').value || 'other',
+        image: document.getElementById('image').value.trim(),
+      };
+      showPreview(data);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      form.reset();
+      previewArea.style.display = 'none';
+      msg.style.display = 'none';
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      msg.style.display = 'none';
+
+      const name = document.getElementById('name').value.trim();
+      const sku = document.getElementById('sku').value.trim();
+      const price = Number(document.getElementById('price').value);
+      const stock = Number(document.getElementById('stock').value) || 0;
+      const category = document.getElementById('category').value;
+      const image = document.getElementById('image').value.trim();
+      const description = document.getElementById('description').value.trim();
+
+      if (!name) return showMsg('Please enter a product name', 'error');
+      if (isNaN(price) || price < 0) return showMsg('Please enter a valid price', 'error');
+
+      // check duplicate SKU if provided
+      const products = getProducts();
+      if (sku) {
+        const clash = products.find(p => p.sku && p.sku.toLowerCase() === sku.toLowerCase());
+        if (clash) return showMsg('SKU already exists. Choose a different SKU or leave empty.', 'error');
+      }
+
+      const product = {
+        id: nextId(),
+        name,
+        sku: sku || `SKU-${Date.now()}`,
+        price,
+        stock,
+        category,
+        image: isValidImageUrl(image) ? image : `https://via.placeholder.com/400x300?text=${encodeURIComponent(name)}`,
+        description,
+        createdAt: new Date().toISOString()
+      };
+
+      products.unshift(product);
+      saveProducts(products);
+
+      showMsg(`Product "${product.name}" added successfully.`,'success');
+      previewArea.style.display = 'none';
+      form.reset();
+
+      // notify other scripts in same tab (if they listen)
+      window.dispatchEvent(new CustomEvent('productsUpdated', { detail: { id: product.id } }));
+
+      // update header cart count if function exists
+      if (typeof updateCartCount === 'function') updateCartCount();
+    });
+
+    // header cart count in page load
+    function getCart() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_CART_KEY) || '[]'); } catch(e){ return []; }
+    }
+    function updateCartCount() {
+      const el = document.getElementById('cartCount');
+      if (!el) return;
+      const cnt = getCart().reduce((s, i) => s + (i.qty || 0), 0);
+      el.textContent = cnt;
+    }
+    document.addEventListener('DOMContentLoaded', updateCartCount);
+  </script>
+</body>
+</html>

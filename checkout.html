@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Checkout — MotoParts</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+  
+    main { max-width:1100px; margin:20px auto; padding:0 20px; }
+    .checkout-grid { display:grid; grid-template-columns: 1fr 380px; gap:24px; }
+    .card { background:#fff; padding:16px; border-radius:8px; box-shadow:0 6px 22px rgba(15,15,15,0.06); }
+    form label { display:block; margin-bottom:8px; font-weight:600; }
+    form input, form textarea { width:100%; padding:10px; border-radius:6px; border:1px solid #ddd; margin-bottom:12px; }
+    #order-summary { font-size:14px; }
+    #order-summary .line { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px dashed #eee; }
+    #order-summary .line:last-child { border-bottom:none; font-weight:700; }
+    .actions { display:flex; gap:12px; justify-content:flex-end; margin-top:12px; }
+    .btn { padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
+    .btn-primary { background:#ff9800; color:#fff; }
+    .btn-secondary { background:#eee; color:#111; }
+    .empty { text-align:center; padding:36px; color:#666; }
+  </style>
+</head>
+<body>
+  <header style="background:#111;color:#fff;padding:14px 20px;">
+    <div style="max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <a href="index.html" style="color:#fff;text-decoration:none;font-weight:700">🏍️ MotoParts</a>
+      </div>
+      <nav>
+        <a href="index.html" style="color:#fff;margin-right:12px;text-decoration:none">Home</a>
+        <a href="cart.html" style="color:#fff;text-decoration:none">Cart</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <h1 style="margin:18px 0">Checkout</h1>
+
+    <div class="checkout-grid">
+    
+      <div class="card">
+        <h2>Shipping & Contact</h2>
+        <form id="checkoutForm">
+          <label for="name">Full name</label>
+          <input id="name" name="name" type="text" required placeholder="Jane Rider">
+
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required placeholder="you@example.com">
+
+          <label for="phone">Phone</label>
+          <input id="phone" name="phone" type="tel" placeholder="+254 7xx xxx xxx">
+
+          <label for="address">Shipping address</label>
+          <textarea id="address" name="address" rows="4" required placeholder="Street, City, Country"></textarea>
+
+          <label for="note">Order note (optional)</label>
+          <textarea id="note" name="note" rows="2" placeholder="Delivery instructions, model compatibility, etc."></textarea>
+
+          <div style="margin-top:8px;">
+            <label for="payment">Payment method</label>
+            <select id="payment" required>
+              <option value="cod">Cash on delivery (COD)</option>
+              <option value="mpesa">M-Pesa (manual)</option>
+              <option value="card">Card (use Stripe later)</option>
+            </select>
+          </div>
+
+          <div class="actions">
+            <button type="button" onclick="location.href='cart.html'" class="btn btn-secondary">Back to Cart</button>
+            <button type="submit" class="btn btn-primary">Place Order</button>
+          </div>
+        </form>
+      </div>
+
+      <aside class="card" id="summaryCard">
+        <h2>Order summary</h2>
+        <div id="order-summary">
+        </div>
+        <div style="margin-top:12px; display:flex; justify-content:space-between;">
+          <div>Subtotal</div>
+          <div id="subtotal">KES 0.00</div>
+        </div>
+        <div style="margin-top:8px; display:flex; justify-content:space-between;">
+          <div>Shipping</div>
+          <div id="shipping">KES 0.00</div>
+        </div>
+        <div style="margin-top:10px; display:flex; justify-content:space-between; font-weight:800; font-size:1.05rem;">
+          <div>Total</div>
+          <div id="total">KES 0.00</div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+  
+    const CART_KEY = 'moto_cart';
+    const PRODUCTS_KEY = 'moto_products';
+    const ORDERS_KEY = 'moto_orders';
+
+    function getCart() {
+      try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); } catch(e) { return []; }
+    }
+    function getProducts() {
+      try { return JSON.parse(localStorage.getItem(PRODUCTS_KEY) || '[]'); } catch(e) { return []; }
+    }
+    function saveOrders(orders) {
+      localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+    }
+    function getOrders() {
+      try { return JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]'); } catch(e) { return []; }
+    }
+    function clearCartLocal() {
+      localStorage.setItem(CART_KEY, JSON.stringify([]));
+      // try to call header update function (if defined in other scripts)
+      if (typeof updateCartCount === 'function') updateCartCount();
+    }
+
+    // Money helper
+    function fmt(n) { return 'KES ' + Number(n).toLocaleString(); }
+
+    // Render order summary
+    function renderSummary() {
+      const cart = getCart();
+      const products = getProducts();
+      const summaryEl = document.getElementById('order-summary');
+      const subtotalEl = document.getElementById('subtotal');
+      const totalEl = document.getElementById('total');
+      const shippingEl = document.getElementById('shipping');
+
+      if (!cart.length) {
+        summaryEl.innerHTML = '<div class="empty">Your cart is empty — <a href="index.html">Shop parts</a></div>';
+        subtotalEl.textContent = 'KES 0.00';
+        shippingEl.textContent = 'KES 0.00';
+        totalEl.textContent = 'KES 0.00';
+        // disable submit
+        document.getElementById('checkoutForm').querySelector('button[type="submit"]').disabled = true;
+        return;
+      }
+
+      // Build lines
+      let subtotal = 0;
+      summaryEl.innerHTML = '';
+      cart.forEach(item => {
+        const meta = products.find(p => Number(p.id) === Number(item.id)) || {};
+        const title = item.name || meta.name || 'Product';
+        const price = Number(item.price || meta.price || 0);
+        const qty = Number(item.qty || 1);
+        const lineTotal = price * qty;
+        subtotal += lineTotal;
+
+        const div = document.createElement('div');
+        div.className = 'line';
+        div.innerHTML = `
+          <div style="max-width:220px">${title} <div style="font-size:12px;color:#666">${qty} × KES ${Number(price).toLocaleString()}</div></div>
+          <div>KES ${Number(lineTotal).toLocaleString()}</div>
+        `;
+        summaryEl.appendChild(div);
+      });
+
+      // Simple shipping rule: free over 5000, else 300
+      const shipping = subtotal >= 5000 ? 0 : 300;
+      subtotalEl.textContent = fmt(subtotal);
+      shippingEl.textContent = fmt(shipping);
+      totalEl.textContent = fmt(subtotal + shipping);
+
+      // enable submit
+      document.getElementById('checkoutForm').querySelector('button[type="submit"]').disabled = false;
+    }
+
+    // Form submission
+    function submitOrder(ev) {
+      ev.preventDefault();
+      const cart = getCart();
+      if (!cart.length) return alert('Your cart is empty');
+
+      // Collect form values
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const address = document.getElementById('address').value.trim();
+      const note = document.getElementById('note').value.trim();
+      const payment = document.getElementById('payment').value;
+
+      if (!name || !email || !address) {
+        return alert('Please fill name, email and address.');
+      }
+
+      // Recompute totals
+      const subtotalStr = document.getElementById('subtotal').textContent.replace(/[^0-9.]/g,'');
+      const shippingStr = document.getElementById('shipping').textContent.replace(/[^0-9.]/g,'');
+      const subtotal = Number(subtotalStr) || 0;
+      const shipping = Number(shippingStr) || 0;
+      const total = subtotal + shipping;
+
+      // Create order object
+      const order = {
+        id: 'ORD-' + Date.now(),
+        createdAt: new Date().toISOString(),
+        customer: { name, email, phone, address },
+        note,
+        payment,
+        items: cart,
+        subtotal,
+        shipping,
+        total,
+        status: 'pending' // pending / paid / shipped (for later)
+      };
+
+      // Save order list
+      const orders = getOrders();
+      orders.unshift(order);
+      saveOrders(orders);
+
+      // Clear cart & redirect to thank you
+      clearCartLocal();
+      // pass order id to thankyou page via query string
+      location.href = `thankyou.html?order=${encodeURIComponent(order.id)}`;
+    }
+
+    // Wire submit with the form
+    document.addEventListener('DOMContentLoaded', () => {
+      // attach form handler
+      const frm = document.getElementById('checkoutForm');
+      if (frm) frm.addEventListener('submit', submitOrder);
+
+      // initial render
+      renderSummary();
+    });
+  </script>
+</body>
+</html>
